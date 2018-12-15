@@ -7,7 +7,7 @@ TODO:
 -- Module Declaration
 --
 
-local mod, CL = BigWigs:NewBoss("Twin Consorts", 930, 829)
+local mod, CL = BigWigs:NewBoss("Twin Consorts", 1098, 829)
 if not mod then return end
 mod:RegisterEnableMob(68905, 68904) -- Lu'lin, Suen
 
@@ -85,13 +85,7 @@ function mod:OnBossEnable()
 	self:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "Phase2", "boss1", "boss2")
 	self:Yell("Phase3", L["last_phase_yell_trigger"])
 
-	self:AddSyncListener("Phase2")
-	self:AddSyncListener("Phase3")
-	self:AddSyncListener("TidalForce")
-	self:AddSyncListener("TearsOfTheSunApplied")
-	self:AddSyncListener("NuclearInferno")
-	self:AddSyncListener("IceComet")
-	self:AddSyncListener("CosmicBarrage")
+	self:RegisterMessage("BigWigs_BossComm")
 
 	self:Death("Deaths", 68905, 68904)
 end
@@ -115,51 +109,66 @@ end
 --
 
 do
-	local function infernoOver(spellId)
+	local function infernoOver()
 		inferno = nil
-		mod:Message(spellId, "Positive", nil, CL["over"]:format(mod:SpellName(137491))) -- Nuclear Inferno
+		mod:Message(137491, "green", nil, CL["over"]:format(mod:SpellName(137491))) -- Nuclear Inferno
 	end
-	function mod:OnSync(sync)
-		if sync == "Phase2" then -- Day
-			self:Bar("stages", 184, CL["phase"]:format(3), 138688)
-			self:Message("stages", "Positive", "Long", CL["phase"]:format(2), 137401)
-			self:StopBar(137404) -- Tears of the Sun
-			self:StopBar(-7634) -- Beast of Nightmares
-			self:StopBar(-7631) -- Cosmic Barrage
-			self:CDBar(-7649, 18) -- Ice Comet
-			self:CDBar(137408, 11) -- Fan of Flames
-			if self:Heroic() then
-				self:Bar(137491, 50) -- Nuclear Inferno
+	local times = {
+		["Phase2"] = 0,
+		["Phase3"] = 0,
+		["TidalForce"] = 0,
+		["TearsOfTheSunApplied"] = 0,
+		["NuclearInferno"] = 0,
+		["IceComet"] = 0,
+		["CosmicBarrage"] = 0,
+	}
+	function mod:BigWigs_BossComm(_, msg)
+		if times[msg] then
+			local t = GetTime()
+			if t-times[msg] > 5 then
+				times[msg] = t
+				if msg == "Phase2" then -- Day
+					self:Bar("stages", 184, CL["phase"]:format(3), 138688)
+					self:Message("stages", "green", "Long", CL["phase"]:format(2), 137401)
+					self:StopBar(137404) -- Tears of the Sun
+					self:StopBar(-7634) -- Beast of Nightmares
+					self:StopBar(-7631) -- Cosmic Barrage
+					self:CDBar(-7649, 18) -- Ice Comet
+					self:CDBar(137408, 11) -- Fan of Flames
+					if self:Heroic() then
+						self:Bar(137491, 50) -- Nuclear Inferno
+					end
+				elseif msg == "Phase3" then -- Dusk
+					phase3 = true
+					self:Message("stages", "green", "Long", CL["phase"]:format(3), 137401)
+					self:StopBar(137408) -- Fan of Flames
+					self:CDBar(-7649, 17) -- Ice Comet
+					self:Bar(137531, self:Heroic() and 19 or 34) -- Tidal Force
+					if self:Heroic() then
+						self:Bar(137491, 63) -- Nuclear Inferno
+					end
+				elseif msg == "TidalForce" then
+					self:Message(137531, "orange", "Alarm")
+					self:CDBar(137531, 71)
+				elseif msg == "TearsOfTheSunApplied" then
+					self:Message(-7643, "yellow", "Warning")
+					self:Bar(-7643, 41)
+				elseif msg == "NuclearInferno" then
+					inferno = true
+					self:Message(137491, "red", "Alert")
+					self:Flash(137491)
+					self:Bar(137491, phase3 and 71 or 55)
+					self:Bar(137491, 12, CL["cast"]:format(self:SpellName(137491))) -- Nuclear Inferno
+					self:ScheduleTimer(infernoOver, 12)
+				elseif msg == "IceComet" then
+					self:Message(-7649, "green")
+					self:CDBar(-7649, phase3 and 30 or 20)
+				elseif msg == "CosmicBarrage" then
+					self:Message(-7631, "orange", "Alarm")
+					self:CDBar(-7631, 20)
+					self:ScheduleTimer("Message", 4.5, -7631, "orange", "Alarm", L["barrage_fired"]) -- This is when the little orbs start to move
+				end
 			end
-		elseif sync == "Phase3" then -- Dusk
-			phase3 = true
-			self:Message("stages", "Positive", "Long", CL["phase"]:format(3), 137401)
-			self:StopBar(137408) -- Fan of Flames
-			self:CDBar(-7649, 17) -- Ice Comet
-			self:Bar(137531, self:Heroic() and 19 or 34) -- Tidal Force
-			if self:Heroic() then
-				self:Bar(137491, 63) -- Nuclear Inferno
-			end
-		elseif sync == "TidalForce" then
-			self:Message(137531, "Urgent", "Alarm")
-			self:CDBar(137531, 71)
-		elseif sync == "TearsOfTheSunApplied" then
-			self:Message(-7643, "Attention", "Warning")
-			self:Bar(-7643, 41)
-		elseif sync == "NuclearInferno" then
-			inferno = true
-			self:Message(137491, "Important", "Alert")
-			self:Flash(137491)
-			self:Bar(137491, phase3 and 71 or 55)
-			self:Bar(137491, 12, CL["cast"]:format(self:SpellName(137491))) -- Nuclear Inferno
-			self:ScheduleTimer(infernoOver, 12, 137491)
-		elseif sync == "IceComet" then
-			self:Message(-7649, "Positive")
-			self:CDBar(-7649, phase3 and 30 or 20)
-		elseif sync == "CosmicBarrage" then
-			self:Message(-7631, "Urgent", "Alarm")
-			self:CDBar(-7631, 20)
-			self:ScheduleTimer("Message", 4.5, -7631, "Urgent", "Alarm", L["barrage_fired"]) -- This is when the little orbs start to move
 		end
 	end
 end
@@ -174,7 +183,7 @@ do
 		local t = GetTime()
 		if t-prev > 2 then
 			prev = t
-			self:Message(args.spellId, "Positive")
+			self:Message(args.spellId, "green")
 			self:Bar(args.spellId, args.spellId == 138855 and 20 or 30) -- Xuen lasts 20s
 		end
 	end
@@ -185,7 +194,7 @@ do
 	function mod:Crane(args)
 		local t = GetTime()
 		if t-prev > 30 then
-			self:Message(args.spellId, "Positive")
+			self:Message(args.spellId, "green")
 			prev = t
 		end
 	end
@@ -209,14 +218,14 @@ do
 		local t = GetTime()
 		if t-prev > 2 then
 			prev = t
-			self:Message(-7638, "Personal", "Info", CL["underyou"]:format(args.spellName))
+			self:Message(-7638, "blue", "Info", CL["underyou"]:format(args.spellName))
 			self:Flash(-7638)
 		end
 	end
 end
 
 function mod:FanOfFlames(args)
-	self:StackMessage(args.spellId, args.destName, args.amount, "Urgent", "Info")
+	self:StackMessage(args.spellId, args.destName, args.amount, "orange", "Info")
 	self:CDBar(args.spellId, 11)
 end
 
@@ -240,7 +249,7 @@ end
 
 function mod:IcyShadows(args)
 	if self:Me(args.destGUID) and not inferno and not self:Tank() then
-		self:Message(args.spellId, "Personal", "Info", CL["underyou"]:format(args.spellName))
+		self:Message(args.spellId, "blue", "Info", CL["underyou"]:format(args.spellName))
 	end
 end
 
@@ -255,7 +264,7 @@ function mod:CosmicBarrage()
 end
 
 function mod:BeastOfNightmares(args)
-	self:TargetMessage(-7634, args.destName, "Attention", "Info", nil, nil, true)
+	self:TargetMessage(-7634, args.destName, "yellow", "Info", nil, nil, true)
 	self:Bar(-7634, 51)
 end
 
@@ -263,7 +272,7 @@ end
 -- General
 --
 
-function mod:Phase2(_, _, _, _, spellId)
+function mod:Phase2(_, _, _, spellId)
 	if spellId == 137187 then -- Lu'lin Dissipate
 		self:Sync("Phase2")
 	end

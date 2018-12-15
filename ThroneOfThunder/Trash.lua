@@ -3,7 +3,7 @@
 -- Module Declaration
 --
 
-local mod, CL = BigWigs:NewBoss("Throne of Thunder Trash", 930)
+local mod, CL = BigWigs:NewBoss("Throne of Thunder Trash", 1098)
 if not mod then return end
 mod.displayName = CL.trash
 mod:RegisterEnableMob(
@@ -12,7 +12,6 @@ mod:RegisterEnableMob(
 	70440, -- Monara
 	70430, -- Rocky Horror
 	69821 -- Thunder Lord
-	--68220 -- Gastropod
 )
 
 --------------------------------------------------------------------------------
@@ -68,10 +67,7 @@ function mod:OnBossEnable()
 	self:Log("SPELL_AURA_APPLIED", "ConductiveShield", 140296)
 
 	self:Log("SPELL_CAST_START", "ShadowNova", 139899)
-	self:AddSyncListener("MonaraSN")
-	self:AddSyncListener("MonaraDies")
-
-	--self:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "Fixated", "target")
+	self:RegisterMessage("BigWigs_BossComm")
 
 	self:Death("Disable", 70236, 70445, 70430, 69821)
 	self:Death("MonaraDies", 70440)
@@ -84,7 +80,7 @@ end
 do
 	local function warnStorms(spellId)
 		scheduled = nil
-		mod:TargetMessage(spellId, debuffTargets, "Urgent", "Alert")
+		mod:TargetMessage(spellId, debuffTargets, "orange", "Alert")
 	end
 	function mod:Storms(args)
 		debuffTargets[#debuffTargets+1] = args.destName
@@ -106,7 +102,7 @@ end
 
 function mod:HorrifyingRoar(args)
 	self:Bar(args.spellId, 26.6) -- Either 29 or 26.6, which is picked may or may not be random
-	self:Message(args.spellId, "Attention", "Long", CL["casting"]:format(args.spellName))
+	self:Message(args.spellId, "yellow", "Long", CL["casting"]:format(args.spellName))
 end
 
 function mod:ConductiveShield(args)
@@ -118,21 +114,31 @@ function mod:ConductiveShield(args)
 		self:Bar(args.spellId, 20.5)
 	end
 	self:Bar(args.spellId, 10, CL["other"]:format(self:SpellName(133249), args.destName)) -- "Shielded"
-	self:Message(args.spellId, "Attention", nil, CL["other"]:format(args.spellName, args.destName))
+	self:Message(args.spellId, "yellow", nil, CL["other"]:format(args.spellName, args.destName))
 end
 
 do
 	-- Sync for corpse runners
-	function mod:OnSync(sync)
-		if sync == "MonaraDies" then
-			self:Disable()
-		elseif sync == "MonaraSN" then
-			local spellId = 139899
-			local name = self:SpellName(spellId)
-			self:Message(spellId, "Urgent", "Long", CL["incoming"]:format(name))
-			self:Bar(spellId, 3, CL["cast"]:format(name))
-			self:Bar(spellId, 14.4)
-			self:Flash(spellId)
+	local times = {
+		["MonaraDies"] = 0,
+		["MonaraSN"] = 0,
+	}
+	function mod:BigWigs_BossComm(_, msg)
+		if times[msg] then
+			local t = GetTime()
+			if t-times[msg] > 5 then
+				times[msg] = t
+				if msg == "MonaraDies" then
+					self:Disable()
+				elseif msg == "MonaraSN" then
+					local spellId = 139899
+					local name = self:SpellName(spellId)
+					self:Message(spellId, "orange", "Long", CL["incoming"]:format(name))
+					self:Bar(spellId, 3, CL["cast"]:format(name))
+					self:Bar(spellId, 14.4)
+					self:Flash(spellId)
+				end
+			end
 		end
 	end
 	function mod:ShadowNova(args)
@@ -142,23 +148,3 @@ do
 		self:Sync("MonaraDies")
 	end
 end
-
---[[
-do
-	local function scan()
-		--self:TargetMessage(args.spellId, args.destName, "Urgent", "Alert")
-		print(UnitName("targettarget"), UnitName("targettargettarget"))
-	end
-	function mod:Fixated(_, _, _, _, spellId)
-		if spellId == 140306 then
-			print(UnitName("targettarget"), UnitName("targettargettarget"))
-			self:ScheduleTimer(scan, 0.05)
-			self:ScheduleTimer(scan, 0.1)
-			self:ScheduleTimer(scan, 0.2)
-			self:ScheduleTimer(scan, 0.3)
-			self:ScheduleTimer(scan, 0.4)
-			self:ScheduleTimer(scan, 0.5)
-		end
-	end
-end
-]]

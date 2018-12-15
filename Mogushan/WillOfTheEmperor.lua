@@ -3,7 +3,7 @@
 -- Module Declaration
 --
 
-local mod, CL = BigWigs:NewBoss("Will of the Emperor", 896, 677)
+local mod, CL = BigWigs:NewBoss("Will of the Emperor", 1008, 677)
 if not mod then return end
 
 --------------------------------------------------------------------------------
@@ -33,29 +33,29 @@ if L then
 
 	L.target_only = "|cFFFF0000This warning only shows for the boss you're targeting.|r "
 
-	L.combo, L.combo_desc = EJ_GetSectionInfo(5672)
+	L.combo = -5672
+	L.combo_desc = L.target_only .. "{-5672}"
 	L.combo_message = "%s: Combo soon!"
 
-	L.arc, L.arc_desc = EJ_GetSectionInfo(5673)
+	L.arc = -5673
+	L.arc_desc = L.target_only .. "{-5673}"
 	L.arc_icon = 116835
 
-	L.rage, L.rage_desc = EJ_GetSectionInfo(5678)
+	L.rage, L.rage_desc = -5678, -5678
 	L.rage_icon = 38771 -- rage like icon
 
-	L.strength, L.strength_desc = EJ_GetSectionInfo(5677)
+	L.strength, L.strength_desc = -5677, -5677
 	L.strength_icon = 80471 -- strength like icon
 
-	L.courage, L.courage_desc = EJ_GetSectionInfo(5676)
+	L.courage, L.courage_desc = -5676, -5676
 	L.courage_icon = 126030 -- shield like icon
 
-	L.titan_spark = EJ_GetSectionInfo(5674)
+	L.titan_spark = -5674
 
-	L.bosses, L.bosses_desc = EJ_GetSectionInfo(5726)
+	L.bosses, L.bosses_desc = -5726, -5726
 	L.bosses_icon = "achievement_moguraid_06"
 end
 L = mod:GetLocale()
-L.combo_desc = L.target_only .. L.combo_desc
-L.arc_desc = L.target_only .. L.arc_desc
 
 --------------------------------------------------------------------------------
 -- Initialization
@@ -134,39 +134,39 @@ end
 --
 
 function mod:Rage()
-	self:Message("rage", "Attention", nil, CL["custom_sec"]:format(L["rage"], 13), L.rage_icon)
+	self:Message("rage", "yellow", nil, CL["custom_sec"]:format(self:SpellName(L["rage"]), 13), L.rage_icon)
 	self:Bar("rage", 13, L["rage"], L.rage_icon)
-	self:DelayedMessage("rage", 13, "Attention", L["rage"], L.rage_icon)
+	self:DelayedMessage("rage", 13, "yellow", L["rage"], L.rage_icon)
 end
 
 function mod:FocusedAssault(args)
 	if self:Me(args.destGUID) then
 		self:Flash(args.spellId)
-		self:Message(args.spellId, "Personal", "Info", CL["you"]:format(args.spellName))
+		self:Message(args.spellId, "blue", "Info", CL["you"]:format(args.spellName))
 	end
 end
 
 function mod:FocusedEnergy(args)
-	self:TargetMessage(args.spellId, args.destName, "Attention", "Info")
+	self:TargetMessage(args.spellId, args.destName, "yellow", "Info")
 end
 
 function mod:Strength()
 	strengthCounter = strengthCounter + 1
-	self:Message("strength", "Attention", nil, CL["custom_sec"]:format(L["strength"], 8), L.strength_icon)
-	self:Bar("strength", 8, CL["count"]:format(L["strength"], strengthCounter), L.strength_icon)
-	self:DelayedMessage("strength", 8, "Attention", CL["count"]:format(L["strength"], strengthCounter), L.strength_icon)
+	self:Message("strength", "yellow", nil, CL["custom_sec"]:format(self:SpellName(L["strength"]), 8), L.strength_icon)
+	self:Bar("strength", 8, CL["count"]:format(self:SpellName(L["strength"]), strengthCounter), L.strength_icon)
+	self:DelayedMessage("strength", 8, "yellow", CL["count"]:format(self:SpellName(L["strength"]), strengthCounter), L.strength_icon)
 end
 
 function mod:Courage()
-	self:Message("courage", "Attention", nil, CL["custom_sec"]:format(L["courage"], 11), L.courage_icon)
+	self:Message("courage", "yellow", nil, CL["custom_sec"]:format(self:SpellName(L["courage"]), 11), L.courage_icon)
 	self:Bar("courage", 11, L["courage"], L.courage_icon) -- shield like icon
-	self:DelayedMessage("courage", 11, "Attention", L["courage"], L.courage_icon)
+	self:DelayedMessage("courage", 11, "yellow", L["courage"], L.courage_icon)
 end
 
 function mod:Bosses()
-	self:Message("bosses", "Attention", nil, CL["custom_sec"]:format(L["bosses"], 13), L.bosses_icon)
+	self:Message("bosses", "yellow", nil, CL["custom_sec"]:format(self:SpellName(L["bosses"]), 13), L.bosses_icon)
 	self:Bar("bosses", 13, L["bosses"], L.bosses_icon)
-	self:DelayedMessage("bosses", 13, "Attention", L["bosses"], L.bosses_icon)
+	self:DelayedMessage("bosses", 13, "yellow", L["bosses"], L.bosses_icon)
 	if not self:Heroic() then
 		self:CDBar(-5670, 123) -- Titan Gas
 	end
@@ -180,12 +180,12 @@ do
 		gasCounter = gasCounter + 1
 		self:ScheduleTimer(fireNext, 30)
 		self:Bar(-5670, 30)
-		self:Message(-5670, "Attention", nil, CL["count"]:format(self:SpellName(-5670), gasCounter))
+		self:Message(-5670, "yellow", nil, CL["count"]:format(self:SpellName(-5670), gasCounter))
 	end
 end
 
 function mod:TitanGasOverdrive()
-	self:Message(-5670, "Important", "Alarm", ("%s (%s)"):format(self:SpellName(-5670), self:SpellName(26662))) --Berserk
+	self:Message(-5670, "red", "Alarm", ("%s (%s)"):format(self:SpellName(-5670), self:SpellName(26662))) --Berserk
 end
 
 do
@@ -200,14 +200,14 @@ do
 	local comboCounter = {boss1 = 0, boss2 = 0}
 	local energizePrev = {boss1 = 0, boss2 = 0}
 
-	function mod:ArcCombo(unitId, spellName, _, _, spellId)
+	function mod:ArcCombo(_, unitId, _, spellId)
 		-- Don't check for target until later so our counter is always correct for each boss, covers target swapping
 		if arcs[spellId] then
 			comboCounter[unitId] = comboCounter[unitId] + 1
 
 			if UnitIsUnit("target", unitId) then
 				local boss = UnitName(unitId)
-				self:Message("arc", "Urgent", nil, ("%s: %s (%d)"):format(boss, spellName, comboCounter[unitId]), arcs[spellId])
+				self:Message("arc", "orange", nil, ("%s: %s (%d)"):format(boss, self:SpellName(spellId), comboCounter[unitId]), arcs[spellId])
 			end
 		elseif spellId == 118365 then -- Energize
 			local t = GetTime()
@@ -218,10 +218,9 @@ do
 				if UnitIsUnit("target", unitId) or self:Healer() then
 					local boss = UnitName(unitId)
 					self:Bar("combo", 20, CL["other"]:format(boss, L["combo"]), spellId)
-					self:DelayedMessage("combo", 17, "Personal", L["combo_message"]:format(boss), L.arc_icon, "Long")
+					self:DelayedMessage("combo", 17, "blue", L["combo_message"]:format(boss), L.arc_icon, "Long")
 				end
 			end
 		end
 	end
 end
-
